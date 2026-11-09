@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ماسح الأسهم السعودية</title>
+<style>
+:root{--bg:#f6f7f9;--cd:#fff;--tx:#14202b;--mu:#5b6b7a;--bd:#dde3ea;--ac:#0a7d4f;--bad:#c0392b;--bl:#1f6feb}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1519;--cd:#18222a;--tx:#e8eef3;--mu:#93a3b1;--bd:#2a3a46;--ac:#3ecf8e;--bad:#ff7b6b;--bl:#6ea8ff}}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,Tahoma,Arial,sans-serif;line-height:1.6}
+main{max-width:1050px;margin:0 auto;padding:16px}h1{font-size:1.3rem;margin:.2rem 0}
+.s{color:var(--mu);font-size:.88rem}.cd{background:var(--cd);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px;overflow-x:auto}
+.r{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:6px 0}
+select,input[type=number]{padding:6px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}input[type=number]{width:64px}
+label{white-space:nowrap}table{border-collapse:collapse;width:100%;min-width:760px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:center;white-space:nowrap}th{color:var(--mu)}
+.e{color:var(--bl);font-weight:700}.st{color:var(--bad);font-weight:700}.t{color:var(--ac);font-weight:700}
+</style></head><body><main>
+<h1>ماسح الأسهم السعودية</h1>
+<div class="cd">
+<div class="r"><label>الإطار الزمني
+<select id="tf"><option value="1d">يومي</option><option value="1h">ساعة</option><option value="30m">30 دقيقة</option><option value="15m">15 دقيقة</option><option value="5m">5 دقائق</option></select></label>
+<label>البحث في آخر <input type="number" id="lb" value="3" min="1" max="6"> شموع</label></div>
+<div class="r" id="cs"></div>
+<div class="r"><label>RSI من <input type="number" id="r1" value="50"> إلى <input type="number" id="r2" value="70"></label>
+<label>حجم التداول ≥ <input type="number" id="vr" value="1.2" step="0.1"> × المتوسط</label></div>
+<div class="s" id="meta">جاري التحميل...</div></div>
+<div class="cd"><table><thead><tr><th>السهم</th><th>وقت الإشارة</th><th>الدخول</th><th>وقف الخسارة</th><th>الهدف 1</th><th>الهدف 2</th><th>RSI</th><th>الحجم×</th><th>السعر الحالي</th><th>التغير</th></tr></thead><tbody id="tb"></tbody></table></div>
+<details class="cd"><summary>الأسهم التي تعذر جلبها</summary><div id="fl" class="s"></div></details>
+<p class="s">بيانات ياهو قد تتأخر 15 دقيقة أو أكثر، والتحديث كل 30 دقيقة أثناء الجلسة. الأطر الصغيرة تغطي أيامًا قليلة فقط. للأغراض التعليمية وليست توصية استثمارية.</p>
+</main><script>
+const $=i=>document.getElementById(i),C=[["mx","تقاطع MACD صعودي",1],["mp","MACD فوق الإشارة",0],["tr","اتجاه صاعد (فوق EMA50 و EMA50>EMA200)",1],["e20","فوق EMA20",0],["brk","كسر مقاومة",0],["sup","قرب دعم",0]];
+let D=null,S={};try{S=JSON.parse(localStorage.getItem("sc")||"{}")}catch(e){}
+$("cs").innerHTML=C.map(([k,n,d])=>`<label><input type="checkbox" id="c_${k}" ${(S[k]??d)?"checked":""}> ${n}</label>`).join("");
+if(S.tf)$("tf").value=S.tf;["lb","r1","r2","vr"].forEach(k=>{if(S[k]!=null)$(k).value=S[k]});
+const f2=x=>x.toFixed(2);
+function render(){
+ if(!D)return;
+ const st={tf:$("tf").value};C.forEach(([k])=>st[k]=$("c_"+k).checked?1:0);["lb","r1","r2","vr"].forEach(k=>st[k]=$(k).value);
+ try{localStorage.setItem("sc",JSON.stringify(st))}catch(e){}
+ const lb=+$("lb").value||1,r1=+$("r1").value,r2=+$("r2").value,vr=+$("vr").value,on=C.filter(([k])=>st[k]).map(x=>x[0]),out=[];
+ for(const r of D.rows){const b=r.bars,L=b[b.length-1];
+  for(let i=b.length-1;i>=Math.max(0,b.length-lb);i--){const x=b[i];
+   if(on.every(k=>x[k])&&x.rsi>=r1&&x.rsi<=r2&&x.vr>=vr){out.push({r,x,L});break}}}
+ out.sort((a,b)=>a.x.t<b.x.t?1:-1);
+ $("tb").innerHTML=out.length?out.map(({r,x,L})=>{const ch=(L.c/x.c-1)*100;
+  return `<tr><td>${r.name.replace(/[<>&]/g,"")} <small>${r.code}</small></td><td>${x.t}</td><td class="e">${f2(x.c)}</td><td class="st">${f2(x.s)}</td><td class="t">${f2(x.t1)}</td><td class="t">${f2(x.t2)}</td><td>${x.rsi}</td><td>${x.vr}</td><td>${f2(L.c)}</td><td>${ch>=0?"+":""}${ch.toFixed(1)}%</td></tr>`}).join(""):'<tr><td colspan="10" class="s">لا توجد أسهم تحقق الشروط</td></tr>';
+ $("meta").textContent=`آخر تحديث: ${D.updated} (الرياض) | آخر شمعة: ${D.last} | الأسهم في القائمة: ${D.total} | تم جلبها: ${D.ok} | النتائج: ${out.length}`;
+ $("fl").textContent=D.failed.length?D.failed.join("، "):"لا يوجد";
+}
+function load(){D=null;$("meta").textContent="جاري التحميل...";
+ fetch("data_"+$("tf").value+".json?"+Date.now()).then(r=>r.json()).then(d=>{D=d;render()}).catch(()=>{$("meta").textContent="لا توجد بيانات لهذا الإطار بعد. شغّل scan من Actions.";$("tb").innerHTML=""})}
+$("tf").onchange=load;document.querySelectorAll("#cs input,#lb,#r1,#r2,#vr").forEach(e=>e.onchange=render);load();
+</script></body></html>
